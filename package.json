@@ -5,6 +5,7 @@
   "main": "blockchain.js",
   "dependencies": {
     "eccrypto": "^1.0.3",
+    "object-sizeof": "^1.2.0",
     "randombytes": "^2.0.6",
     "sha256": "^0.2.0",
     "sleep": "^5.1.1"
