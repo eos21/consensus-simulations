@@ -6,10 +6,10 @@ const eccrypto = require("eccrypto");
 
 const maxFees = 5000
 var accounts = generateAccounts(100)
-var nodes = generateNodes(4, accounts)
+var nodes = generateNodes(50, accounts)
 
 function transactionFlood() {
-  generateTransactions(50, nodes)
+  generateTransactions(1000, nodes)
 }
 
 setInterval(transactionFlood, 500)

@@ -9,7 +9,7 @@ var accounts = generateAccounts(100)
 var nodes = generateNodes(4, accounts)
 
 function transactionFlood() {
-  generateTransactions(20, nodes)
+  generateTransactions(500, nodes)
 }
 
 setInterval(transactionFlood, 500)
