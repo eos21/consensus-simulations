@@ -9,7 +9,7 @@ var accounts = generateAccounts(100)
 var nodes = generateNodes(4, accounts)
 
 function transactionFlood() {
-  generateTransactions(100, nodes)
+  generateTransactions(50, nodes)
 }
 
 setInterval(transactionFlood, 500)
@@ -38,7 +38,9 @@ function generateNodes(total, accounts) {
       stake: getRandomInt(1000),
       accounts: accounts,
       txPool: [],
+      txPoolHashes: [],
       finalizedTransactions: [],
+      finalizedTransactionHashes: [],
       totalTransactions: 0,
       totalTime: 0,
       startTime: new Date().getTime()
@@ -80,53 +82,53 @@ function generateTransaction(from, to, node) {
     from: from.public,
     to: to.public,
     value: getRandomInt(from.balance),
-    timestamp: new Date().getTime()
+    timestamp: new Date().getTime(),
+    confidence: 0
   }
   var msg = crypto.createHash("sha256").update(JSON.stringify(transaction)).digest();
   eccrypto.sign(from.privateKey, msg).then(function(sig) {
     transaction.sig = sig.toString('hex')
     transaction.hash = crypto.createHash("sha256").update(JSON.stringify(transaction)).digest().toString('hex');
     node.txPool.push(transaction)
+    node.txPoolHashes.push(transaction.hash)
   });
 }
 
-function voteTransactions() {
+function gossip() {
   for (var n = 0; n < nodes.length; n++) {
     var node = nodes[n]
-    while (node.txPool.length > 0) {
+    for (var t = 0; t < node.txPool.length; t++) {
       var transaction = node.txPool.shift()
-      if (!voteTransaction(transaction)) {
+      var confidence = ask(transaction)
+      if (transaction.confidence > nodes.length / 2 * 3) {
+        node.totalTransactions++
+        node.totalTime = new Date().getTime() - node.startTime
+        node.finalizedTransactions.push(transaction)
+        node.finalizedTransactionHashes.push(transaction.hash)
+      } else {
         node.txPool.push(transaction)
       }
     }
   }
 }
 
-function voteTransaction(transaction) {
-  var stake = 0
-  var totalStake = 0
-  for (var n = 0; n < nodes.length; n++) {
-    var node = nodes[n]
-    totalStake += node.stake
-    stake += node.stake
+function ask(transaction) {
+  var k = getRandomInt(nodes.length)
+  var confidence = transaction.confidence
+  for (var n = 0; n < k; n++) {
+    var node = nodes[getRandomInt(nodes.length)]
+    if (node.finalizedTransactionHashes.includes(transaction.hash)) {
+      transaction.confidence += 2
+    } else if (node.txPoolHashes.includes(transaction.hash)) {
+      transaction.confidence += 1
+    } else {
+      transaction.confidence += 1
+      node.txPool.push(transaction)
+      node.txPoolHashes.push(transaction.hash)
+    }
   }
-  if (stake > (totalStake / 3 * 2)) {
-    propagateTransaction(transaction)
-    return true
-  } else {
-    return false
-  }
+  return confidence
 }
-
-function propagateTransaction(transaction) {
-  for (var n = 0; n < nodes.length; n++) {
-    var node = nodes[n]
-    node.totalTransactions++
-    node.totalTime = new Date().getTime() - node.startTime
-    node.finalizedTransactions.push(transaction)
-  }
-}
-
 
 function getRandomInt(max) {
   return Math.floor(Math.random() * Math.floor(max));
